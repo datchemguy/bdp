@@ -33,4 +33,15 @@ class FPPracticeTest extends FunSuite {
             headSumsTail(in)
         }
     }
+
+    test("Head sums tail 2") {
+        val in = List(
+            List(5, 4, 3, 2, 1, 6),
+            List(1),
+            List(4, 1, 2, -1),
+        )
+        assertResult(None) {
+            headSumsTail(in)
+        }
+    }
 }
