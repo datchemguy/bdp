@@ -27,11 +27,17 @@ class FPFunctionsTest extends FunSuite {
         assertResult(7) {
             foldL(List(1, 5, 3, 6), (x: Int, y: Int) => x + y, -8)
         }
+        assertResult(-23) {
+            foldL(List(1, 5, 3, 6), (x: Int, y: Int) => x - y, -8)
+        }
     }
 
     test("FoldR") {
         assertResult(7) {
             foldR(List(1, 5, 3, 6), (x: Int, y: Int) => x + y, -8)
+        }
+        assertResult(-15) {
+            foldR(List(1, 5, 3, 6), (x: Int, y: Int) => x - y, -8)
         }
     }
 
