@@ -18,6 +18,12 @@ class PatternMatching2Test extends FunSuite{
     }
   }
 
+  test("myforall") {
+    assert(myForAll(List("sa", "sssb", "sf"), (s: String) => s.startsWith("s")))
+    assert(!myForAll(List("sa", "bsssb", "sf"), (s: String) => s.startsWith("s")))
+    assert(myForAll(List(), (s: String) => s.startsWith("s")))
+  }
+
 
   test("lastElem") {
     assertResult(Some("yes")) {
