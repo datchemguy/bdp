@@ -43,4 +43,10 @@ class DatasetTest extends FunSuite {
             topFileFormats(source)
         }
     }
+
+    test("times of day") {
+        assertResult(("afternoon", 989)) {
+            mostProductivePart(source)
+        }
+    }
 }
