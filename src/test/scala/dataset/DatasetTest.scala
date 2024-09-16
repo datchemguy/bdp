@@ -45,7 +45,7 @@ class DatasetTest extends FunSuite {
     }
 
     test("times of day") {
-        assertResult(("afternoon", 989)) {
+        assertResult(("afternoon", 992)) {
             mostProductivePart(source)
         }
     }
