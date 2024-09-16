@@ -1,13 +1,9 @@
 package dataset
 
 import dataset.util.Commit.Commit
-import org.json4s.{Formats, NoTypeHints}
-import org.json4s.native.Serialization
 
 import java.text.SimpleDateFormat
 import java.util.SimpleTimeZone
-import scala.io.Source
-import scala.math.Ordering.Implicits._
 
 /**
  * Use your knowledge of functional programming to complete the following functions.
@@ -23,7 +19,11 @@ object Dataset {
     val parts = commit.url.split("https://api.github.com/repos/|/")
     parts.apply(1) + "/" + parts.apply(2)
   }
-  def hour(commit: Commit): Int = new SimpleDateFormat("H").format(commit.commit.committer.date).toInt
+  def hour(commit: Commit): Int = {
+    val form = new SimpleDateFormat("H")
+    form.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"))
+    form.format(commit.commit.committer.date).toInt
+  }
 
   /** Q23 (4p)
    * For the commits that are accompanied with stats data, compute the average of their additions.
