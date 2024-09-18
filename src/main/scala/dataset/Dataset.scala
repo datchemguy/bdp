@@ -15,11 +15,11 @@ import java.util.SimpleTimeZone
  * This part is worth 40 points.
  */
 object Dataset {
-  def repoOf(commit: Commit): String = {
+  private def repoOf(commit: Commit): String = {
     val parts = commit.url.split("https://api.github.com/repos/|/")
     parts.apply(1) + "/" + parts.apply(2)
   }
-  def hour(commit: Commit): Int = {
+  private def hour(commit: Commit): Int = {
     val form = new SimpleDateFormat("H")
     form.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"))
     form.format(commit.commit.committer.date).toInt
