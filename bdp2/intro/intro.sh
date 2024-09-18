@@ -1,4 +1,4 @@
-##!/usr/bin/env bash
+#!/usr/bin/env bash
 
 # This is a bash script file.
 # To run this file use `./intro.sh` in your terminal while in the correct directory.
