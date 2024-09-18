@@ -35,10 +35,9 @@ object Practice {
       * @return the maximum value in the list.
       */
     def maxValue(xs: List[Int]): Int = xs match {
-        case x :: rest => {
+        case x :: rest =>
             val m = maxValue(rest)
             if(x > m) x else m
-        }
         case _ => Int.MinValue
     }
 
