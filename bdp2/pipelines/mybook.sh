@@ -42,7 +42,7 @@ echo "-- Q3 --"
 # It seems that the writer of the book mistyped the word "I" and used a lower case "i" instead.
 # Write a pipeline that finds all the text files and replaces all the words "i" with its uppercase variant.
 # Make sure that it is NOT inline and that the output book is in its original order.
-fixedBook=$(cat *.txt | sed 's/[ "]i[ "]/[ "]I[ "]/g')
+fixedBook=$(cat *.txt | sed 's/\(\W\)i\(\W\)/\1I\2/g')
 echo "The corrected book:"
 echo "$fixedBook"
 echo "--------"
