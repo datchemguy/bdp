@@ -5,3 +5,9 @@
 # This script should take an output name as the first parameter.
 # If called in a directory, it should recursively find all the `.sh` files and add them to a zip folder.
 # The zip folder should only contain `.sh` files and no folders.
+mkdir createsubtemp
+find . -name '*.sh' -exec cp -t createsubtemp/ {} +
+cd createsubtemp || exit
+find . -name '*.sh' -exec zip -q "../$1.zip" {} +
+cd ..
+rm -rf createsubtemp
