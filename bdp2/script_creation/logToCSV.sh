@@ -8,3 +8,4 @@
 # This can be done by piping the output to a file.
 # Example: `./logToCSV access_log > output.csv`
 # It could take some time to convert all of the `access_log` file contents. Consider using a small subset for testing.
+tr -d '[]"' <"$1"| cut -d ' ' -f 1,4,6,7,9,10 --output-delimiter=','
