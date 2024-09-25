@@ -8,7 +8,7 @@ cd ./../data/apacheLog || exit
 echo "-- Q1 --"
 # Write a pipeline that gets all POST requests from the `access_log` file and displays time, clientIP, path, statusCode and size. These values should be comma-separated.
 # Example output: 10/Mar/2004:12:02:59,10.0.0.153,/cgi-bin/mailgraph2.cgi,200,2987
-accessData=$(grep 'POST' <access_log | tr -d '[]' | awk '{print $4,$1,$7,$9,$10}' | tr ' ' ',')
+accessData=$(grep 'POST' <access_log | tr -d '[]' | awk '{print $4","$1","$7","$9","$10}')
 # Print the accessData
 echo "Access data:"
 echo "$accessData"
