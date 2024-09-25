@@ -65,7 +65,7 @@ echo "First pipeline results:"
 echo "$firstPipeline"
 
 # Implement a pipeline that displays only the owner of the log files in the current directory.
-secondPipeline=$(ls -l *_log | cut -d ' ' -f 3)
+secondPipeline=$(ls -l | grep "_log" | cut -d ' ' -f 3)
 # Print result
 echo "Second pipeline results:"
 echo "$secondPipeline"
