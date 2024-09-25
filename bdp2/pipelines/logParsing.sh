@@ -22,7 +22,7 @@ echo "-- Q2 --"
 # Write a pipeline that returns the IP address and the path of the largest-sized response to a POST request.
 # Example output: 192.168.0.1,/actions/logout
 # Hint: you could re-use the `accessData` variable to make it easier.
-largestResponse=$(grep 'POST' <access_log | sort -nr -k10 | cut -d ' ' -f 1,7 --output-delimiter=',' | head -1)
+largestResponse=$(grep 'POST' <access_log | sort -nr -k10 | head -1 | cut -d ' ' -f 1,7 --output-delimiter=',')
 echo "The largest Response was to:"
 echo "$largestResponse"
 
