@@ -8,3 +8,4 @@
 # This can be done by piping the output to a file.
 # Example: `./logToCSV access_log > output.csv`
 # It could take some time to convert all of the `access_log` file contents. Consider using a small subset for testing.
+awk '{print $1","substr($4,2)","substr($6,2)","$7","$9","$10}' <"$1"

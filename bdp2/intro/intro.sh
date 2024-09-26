@@ -9,7 +9,7 @@ echo "Running intro.sh"
 
 # The `cd` command (change directory) can be used to change the current directory.
 # Update the `cd` command below to make sure that the rest of this script is executed in the apacheLog folder, that is inside of the data folder:
-cd ./ || exit
+cd ../data/apacheLog || exit
 # The '||' on this line represents the logical `or` operator. If the left part gives an exit code of non-zero (error/false), then the right part is evaluated.
 # If the left part gives an exit code of zero (successful), then the right part is not evaluated at all.
 # We also have the '&&' operator (and). This only evaluates the right part if the left part has a zero exit code (no error/true).
@@ -22,7 +22,7 @@ echo "Result of ls"
 echo "$lsOutput"
 
 # Implement a command  that counts the number files  in the current directory.
-nmrOfFiles=$()
+nmrOfFiles=$(ls | wc -l)
 echo "Number of files"
 echo "$nmrOfFiles"
 
@@ -30,19 +30,19 @@ echo "$nmrOfFiles"
 # Do this by typing it between the brackets below.
 # You can first test individual commands by pasting them in the terminal.
 # (Make sure that you are in the correct directory if you want to test it)
-detailedLsOutput=$()
+detailedLsOutput=$(ls -l)
 # Prints the detailedLsOutput
 echo "Files in directory:"
 echo "$detailedLsOutput"
 
 # Implement a command that looks for all files containing '_log' in their name
-logFiles=$()
+logFiles=$(find ./ -name '*_log*')
 # Print result
 echo "Log files:"
 echo "$logFiles"
 
 # Implement a command that gets all the lines that contain "File does not exist" from the 'error_log' file, which can be found in the `data` directory:
-lines=$()
+lines=$(grep 'File does not exist' <error_log)
 # Print result
 echo "Lines from error_log where 'File does not exist:'"
 echo "$lines"
@@ -60,12 +60,12 @@ ls | lolcat
 # The first part should take all the lines containing "GET" from the 'access_log' file.
 # The second part should only keep the first 3 lines.
 # Lastly, we need to get the data that is in between the quotes.
-firstPipeline=$()
+firstPipeline=$(grep 'GET' <access_log | head -3 | cut -d '"' -f 2)
 echo "First pipeline results:"
 echo "$firstPipeline"
 
 # Implement a pipeline that displays only the owner of the log files in the current directory.
-secondPipeline=$()
+secondPipeline=$(ls -l | grep "_log" | cut -d ' ' -f 3)
 # Print result
 echo "Second pipeline results:"
 echo "$secondPipeline"
