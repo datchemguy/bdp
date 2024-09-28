@@ -1,13 +1,11 @@
 package RDDAssignment
 
 import java.util.UUID
-
 import java.math.BigInteger
 import java.security.MessageDigest
-
 import org.apache.spark.graphx.Graph
 import org.apache.spark.rdd.RDD
-import utils.{Commit, File, Stats}
+import utils.{Commit, File, Stats, User}
 
 object RDDAssignment {
 
@@ -19,7 +17,7 @@ object RDDAssignment {
     * @param commits RDD containing commit data.
     * @return Long indicating the number of commits in the given RDD.
     */
-  def assignment_1(commits: RDD[Commit]): Long = ???
+  def assignment_1(commits: RDD[Commit]): Long = commits.count
 
   /**
     * We want to know how often programming languages are used in committed files. We want you to return an RDD containing Tuples
@@ -29,7 +27,10 @@ object RDDAssignment {
     * @param commits RDD containing commit data.
     * @return RDD containing tuples indicating the programming language (extension) and number of occurrences.
     */
-  def assignment_2(commits: RDD[Commit]): RDD[(String, Long)] = ???
+  def assignment_2(commits: RDD[Commit]): RDD[(String, Long)] = commits.flatMap(_.files)
+    .map(_.filename.getOrElse(""))
+    .groupBy(x => if(x.contains('.')) x.substring(x.lastIndexOf('.')+1) else "unknown")
+    .mapValues(_.size.toLong)
 
   /**
     * Competitive users on GitHub might be interested in their ranking in the number of commits. We want you to return an
@@ -54,7 +55,10 @@ object RDDAssignment {
     * @param commits RDD containing commit data.
     * @return RDD containing committer names and an aggregation of the committers Stats.
     */
-  def assignment_4(commits: RDD[Commit], users: List[String]): RDD[(String, Stats)] = ???
+  def assignment_4(commits: RDD[Commit], users: List[String]): RDD[(String, Stats)] = commits
+    .filter(x => users.contains(x.commit.committer.name))
+    .groupBy(_.commit.committer.name)
+    .mapValues(_.map(_.stats.getOrElse(Stats(0,0,0))).reduce((x, y) => Stats(x.total + y.total, x.additions + y.additions, x.deletions + y.deletions)))
 
 
   /**
