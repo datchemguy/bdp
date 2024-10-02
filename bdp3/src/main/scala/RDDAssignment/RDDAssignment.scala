@@ -7,6 +7,8 @@ import org.apache.spark.graphx.Graph
 import org.apache.spark.rdd.RDD
 import utils.{Commit, File, Stats, User}
 
+import scala.annotation.tailrec
+
 object RDDAssignment {
 
 
@@ -42,7 +44,11 @@ object RDDAssignment {
     * @param commits RDD containing commit data.
     * @return RDD containing the rank, the name and the total number of commits for every author, in the ordered fashion.
     */
-  def assignment_3(commits: RDD[Commit]): RDD[(Long, String, Long)] = ???
+  def assignment_3(commits: RDD[Commit]): RDD[(Long, String, Long)] = commits.groupBy(_.commit.author.name)
+    .mapValues(_.size.toLong)
+    .sortBy(x => (-x._2, x._1.toLowerCase))
+    .zipWithIndex
+    .map(x => (x._2, x._1._1, x._1._2))
 
   /**
     * Some users are interested in seeing an overall contribution of all their work. For this exercise we want an RDD that
@@ -55,10 +61,12 @@ object RDDAssignment {
     * @param commits RDD containing commit data.
     * @return RDD containing committer names and an aggregation of the committers Stats.
     */
-  def assignment_4(commits: RDD[Commit], users: List[String]): RDD[(String, Stats)] = commits
-    .filter(x => users.contains(x.commit.committer.name))
-    .groupBy(_.commit.committer.name)
-    .mapValues(_.map(_.stats.getOrElse(Stats(0,0,0))).reduce((x, y) => Stats(x.total + y.total, x.additions + y.additions, x.deletions + y.deletions)))
+  def assignment_4(commits: RDD[Commit], users: List[String]): RDD[(String, Stats)] = {
+    val uset = users.toSet
+    commits.filter(x => uset.contains(x.commit.committer.name))
+      .groupBy(_.commit.committer.name)
+      .mapValues(_.map(_.stats.getOrElse(Stats(0,0,0))).reduce((x, y) => Stats(x.total + y.total, x.additions + y.additions, x.deletions + y.deletions)))
+  }
 
 
   /**
@@ -73,7 +81,9 @@ object RDDAssignment {
     * @return RDD of Strings representing the usernames that have either only committed to repositories or only own
     *         repositories.
     */
-  def assignment_5(commits: RDD[Commit]): RDD[String] = ???
+  def assignment_5(commits: RDD[Commit]): RDD[String] = commits
+    .map(_.url.split('/').apply(4))
+    .union(commits.map(_.commit.author.name))
 
   /**
     * Sometimes developers make mistakes and sometimes they make many many of them. One way of observing mistakes in commits is by
@@ -90,7 +100,18 @@ object RDDAssignment {
     * @return RDD of Tuples containing a commit author's name and a Tuple which contains the length of the longest
     *         'revert streak' as well its frequency.
     */
-  def assignment_6(commits: RDD[Commit]): RDD[(String, (Int, Int))] = ???
+  def assignment_6(commits: RDD[Commit]): RDD[(String, (Int, Int))] = {
+    @tailrec def streak(list: Iterable[String], length: Int = 0, times: Int = 0): (Int, Int) = list match {
+      case x :: rest =>
+        val len = x.sliding(6).count(_ == "Revert")
+        if(len > length) streak(rest, len, 1) else if(len == length) streak(rest, len, times+1) else streak(rest, length, times)
+      case _ => (length, times)
+    }
+    commits.groupBy(_.commit.author.name)
+      .mapValues(_.map(_.commit.message).filter(_.startsWith("Revert")))
+      .filter(_._2.nonEmpty)
+      .mapValues(streak(_))
+  }
 
 
   /**
