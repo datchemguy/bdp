@@ -3,14 +3,17 @@ package RDDAssignment
 import java.util.UUID
 import java.math.BigInteger
 import java.security.MessageDigest
-import org.apache.spark.graphx.Graph
+import org.apache.spark.graphx.{Edge, Graph}
 import org.apache.spark.rdd.RDD
 import utils.{Commit, File, Stats, User}
 
 import scala.annotation.tailrec
 
 object RDDAssignment {
-
+  private def repo(commit: Commit): String = commit.url.split('/').apply(5)
+  private def autrepo(commit: Commit): String = commit.url.split("/")(4) + "/" + repo(commit)
+  private def add(s1: Stats, s2: Stats): Stats = Stats(s1.total + s2.total, s1.additions + s2.additions, s1.deletions + s2.deletions)
+  private def stat(op: Option[Stats]): Stats = op.getOrElse(Stats(0, 0, 0))
 
   /**
     * Reductions are often used in data processing in order to gather more useful data out of raw data. In this case
@@ -65,7 +68,7 @@ object RDDAssignment {
     val uset = users.toSet
     commits.filter(x => uset.contains(x.commit.committer.name))
       .groupBy(_.commit.committer.name)
-      .mapValues(_.map(_.stats.getOrElse(Stats(0,0,0))).reduce((x, y) => Stats(x.total + y.total, x.additions + y.additions, x.deletions + y.deletions)))
+      .mapValues(_.map(x => stat(x.stats)).reduce(add))
   }
 
 
@@ -127,7 +130,10 @@ object RDDAssignment {
     * @return RDD containing Tuples with the repository name, the number of commits made to the repository as
     *         well as the names of the unique committers to this repository.
     */
-  def assignment_7(commits: RDD[Commit]): RDD[(String, Long, Iterable[String])] = ???
+  def assignment_7(commits: RDD[Commit]): RDD[(String, Long, Iterable[String])] = commits
+    .map(x => (repo(x), (1L, Set(x.commit.committer.name))))
+    .reduceByKey((x, y) => (x._1 + y._1, x._2.union(y._2)))
+    .map(x => (x._1, x._2._1, x._2._2))
 
   /**
     * Return an RDD of Tuples containing the repository name and all the files that are contained in this repository.
@@ -140,7 +146,10 @@ object RDDAssignment {
     * @param commits RDD containing commit data.
     * @return RDD containing the files in each repository as described above.
     */
-  def assignment_8(commits: RDD[Commit]): RDD[(String, Iterable[File])] = ???
+  def assignment_8(commits: RDD[Commit]): RDD[(String, Iterable[File])] = commits
+    .map(x => (repo(x), x.files.filter(_.filename.nonEmpty)))
+    .reduceByKey((x, y) => x.union(y))
+    .mapValues(_.toIterable)
 
 
   /**
@@ -154,7 +163,14 @@ object RDDAssignment {
     * @return RDD containing Tuples representing a file name, its corresponding commit SHA's and a Stats object
     *         representing the total aggregation of changes for a file.
     */
-  def assignment_9(commits: RDD[Commit], repository: String): RDD[(String, Seq[String], Stats)] = ???
+  def assignment_9(commits: RDD[Commit], repository: String): RDD[(String, Seq[String], Stats)] = commits
+    .filter(repo(_) == repository)
+    .map(x => (x.parents.map(_.sha), x))
+    .flatMapValues(_.files)
+    .filter(_._2.filename.nonEmpty)
+    .map(x => (x._2.filename.get, (x._1, Stats(x._2.changes, x._2.additions, x._2.deletions))))
+    .reduceByKey((x, y) => (x._1 ::: y._1, add(x._2, y._2)))
+    .map(x => (x._1, x._2._1, x._2._2))
 
   /**
     * We want to generate an overview of the work done by a user per repository. For this we want an RDD containing
@@ -168,7 +184,10 @@ object RDDAssignment {
     * @return RDD containing Tuples of the committer's name, the repository name and an `Option[Stat]` object representing additions,
     *         deletions and the total contribution to this repository by this committer.
     */
-  def assignment_10(commits: RDD[Commit]): RDD[(String, String, Option[Stats])] = ???
+  def assignment_10(commits: RDD[Commit]): RDD[(String, String, Option[Stats])] = commits
+    .map(x => ((x.commit.committer.name, repo(x)), x.stats))
+    .reduceByKey((x, y) => if(x.isEmpty && y.isEmpty) None else Some(add(stat(x), stat(y))))
+    .map(x => (x._1._1, x._1._2, x._2))
 
 
   /**
@@ -178,7 +197,7 @@ object RDDAssignment {
     * @param s String to be hashed, consecutively mapped to a Long.
     * @return Long representing the MSB of the hashed input String.
     */
-  def md5HashString(s: String): Long = {
+  private def md5HashString(s: String): Long = {
     val md = MessageDigest.getInstance("MD5")
     val digest = md.digest(s.getBytes)
     val bigInt = new BigInteger(1, digest)
@@ -205,5 +224,10 @@ object RDDAssignment {
     * @param commits RDD containing commit data.
     * @return Graph representation of the commits as described above.
     */
-  def assignment_11(commits: RDD[Commit]): Graph[(String, String), String] = ???
+  def assignment_11(commits: RDD[Commit]): Graph[(String, String), String] = {
+    val verts = commits.map(x => (md5HashString(autrepo(x) + "r"), ("repository", autrepo(x))))
+      .union(commits.map(x => (md5HashString(x.commit.committer.name + "d"), ("developer", x.commit.committer.name))))
+    val edges = commits.map(x => Edge(md5HashString(x.commit.committer.name + "d"), md5HashString(autrepo(x) + "r"), "edge")).distinct
+    Graph.apply(verts, edges)
+  }
 }
