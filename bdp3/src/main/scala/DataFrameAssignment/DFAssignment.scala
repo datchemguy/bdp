@@ -1,8 +1,12 @@
 package DataFrameAssignment
 
-import java.sql.Timestamp
+import org.apache.spark.sql.functions.{col, datediff, dayofweek, lag, udf, weekofyear, when, year}
 
+import java.sql.Timestamp
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.expressions.Window.orderBy
+
+import scala.language.postfixOps
 
 /**
   * Please read the comments carefully, as they describe the expected result and may contain hints in how
@@ -10,6 +14,8 @@ import org.apache.spark.sql.DataFrame
   * reflect the format of the data, but not the result the graders expect (unless stated otherwise).
   */
 object DFAssignment {
+  private val repo = udf((x: String) => x.split('/')(5))
+  private val secs = udf((x: Timestamp) => x.getTime / 1000)
 
   /**
     * In this exercise we want to know all the commit SHA's from a list of committers. We require these to be
@@ -30,7 +36,10 @@ object DFAssignment {
     *                SHA's.
     * @return DataFrame of commits from the requested authors, including the commit SHA and the according timestamp.
     */
-  def assignment_12(commits: DataFrame, authors: Seq[String]): DataFrame = ???
+  def assignment_12(commits: DataFrame, authors: Seq[String]): DataFrame = commits
+    .filter(col("commit.committer.name") isInCollection authors)
+    .select("commit.committer.name", "sha", "commit.committer.date")
+    .orderBy("date")
 
   /**
     * In order to generate weekly dashboards for all projects, we need the data to be partitioned by weeks. As projects
@@ -48,7 +57,10 @@ object DFAssignment {
     * @return DataFrame containing 4 columns: repository name, week number, year and the number of commits for that
     *         week.
     */
-  def assignment_13(commits: DataFrame): DataFrame = ???
+  def assignment_13(commits: DataFrame): DataFrame = commits
+    .select(repo(col("url")) as "repository", weekofyear(col("commit.committer.date")) as "week", year(col("commit.committer.date")) as "year")
+    .groupBy("repository", "week", "year")
+    .count
 
   /**
     * A developer is interested in the age of commits in seconds. Although this is something that can always be
@@ -68,7 +80,10 @@ object DFAssignment {
     * @param commits Commit DataFrame, created from the data_raw.json file.
     * @return the input DataFrame with the appended `age` column.
     */
-  def assignment_14(commits: DataFrame, snapShotTimestamp: Timestamp): DataFrame = ???
+  def assignment_14(commits: DataFrame, snapShotTimestamp: Timestamp): DataFrame = {
+    val now = snapShotTimestamp.getTime / 1000
+    commits.withColumn("age", - secs(col("commit.committer.date")) + now)
+  }
 
   /**
     * To perform the analysis on commit behavior, the intermediate time of commits is needed. We require that the DataFrame
@@ -93,7 +108,11 @@ object DFAssignment {
     * @param authorName Name of the author for which the result must be generated.
     * @return DataFrame with an appended column expressing the number of days since last commit, for the given user.
     */
-  def assignment_15(commits: DataFrame, authorName: String): DataFrame = ???
+  def assignment_15(commits: DataFrame, authorName: String): DataFrame = commits
+    .filter(col("commit.committer.name") equalTo authorName)
+    .withColumn("prev", lag(col("commit.committer.date"), 1).over(orderBy("commit.committer.date")))
+    .withColumn("time_diff", when(col("prev") isNull, 0).otherwise(datediff(col("commit.committer.date"), col("prev"))))
+    .drop("prev")
 
   /**
     * To get a bit of insight into the spark SQL and its aggregation functions, you will have to implement a function
@@ -112,7 +131,9 @@ object DFAssignment {
     * @return DataFrame containing a `day` column and a `commits_per_day` column representing the total number of
     *         commits that have been made on that week day.
     */
-  def assignment_16(commits: DataFrame): DataFrame = ???
+  def assignment_16(commits: DataFrame): DataFrame = commits
+    .groupBy(dayofweek(col("commit.committer.date")) as "day")
+    .count
 
   /**
     * Commits can be uploaded on different days. We want to get insight into the difference in commit time of the author and
