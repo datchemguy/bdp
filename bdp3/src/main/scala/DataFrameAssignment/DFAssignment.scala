@@ -1,6 +1,6 @@
 package DataFrameAssignment
 
-import org.apache.spark.sql.functions.{col, datediff, dayofweek, lag, udf, weekofyear, when, year}
+import org.apache.spark.sql.functions.{col, datediff, dayofweek, explode, first, lag, udf, weekofyear, when, year}
 
 import java.sql.Timestamp
 import org.apache.spark.sql.DataFrame
@@ -14,7 +14,11 @@ import scala.language.postfixOps
   * reflect the format of the data, but not the result the graders expect (unless stated otherwise).
   */
 object DFAssignment {
-  private val repo = udf((x: String) => x.split('/')(5))
+  private val repo = udf((x: String) => x.split("/")(5))
+  private val fullrepo = udf((x: String) => {
+    val arr = x.split("/")
+    arr(4) + "/" + arr(5)
+  })
   private val secs = udf((x: Timestamp) => x.getTime / 1000)
 
   /**
@@ -59,8 +63,7 @@ object DFAssignment {
     */
   def assignment_13(commits: DataFrame): DataFrame = commits
     .select(repo(col("url")) as "repository", weekofyear(col("commit.committer.date")) as "week", year(col("commit.committer.date")) as "year")
-    .groupBy("repository", "week", "year")
-    .count
+    .groupBy("repository", "week", "year").count
 
   /**
     * A developer is interested in the age of commits in seconds. Although this is something that can always be
@@ -132,8 +135,7 @@ object DFAssignment {
     *         commits that have been made on that week day.
     */
   def assignment_16(commits: DataFrame): DataFrame = commits
-    .groupBy(dayofweek(col("commit.committer.date")) as "day")
-    .count
+    .groupBy(dayofweek(col("commit.committer.date")) as "day").count
 
   /**
     * Commits can be uploaded on different days. We want to get insight into the difference in commit time of the author and
@@ -153,7 +155,8 @@ object DFAssignment {
     * @return the original DataFrame with an appended column `commit_time_diff`, containing the time difference
     *         (in number of seconds) between authorizing and committing.
     */
-  def assignment_17(commits: DataFrame): DataFrame = ???
+  def assignment_17(commits: DataFrame): DataFrame = commits
+    .withColumn("commit_time_diff", secs(col("commit.committer.date")) - secs(col("commit.author.date")))
 
   /**
     * Using DataFrames, find all the commit SHA's from which a branch has been created, including the number of
@@ -174,7 +177,10 @@ object DFAssignment {
     * @return DataFrame containing the commit SHAs from which at least one new branch has been created, and the actual
     *         number of created branches
     */
-  def assignment_18(commits: DataFrame): DataFrame = ???
+  def assignment_18(commits: DataFrame): DataFrame = commits
+    .select(explode(col("parents")) as "sha").select("sha.sha")
+    .groupBy("sha").count
+    .withColumnRenamed("count", "times_parent")
 
   /**
     * In the given commit DataFrame, find all commits from which a fork has been created. We are interested in the names
@@ -198,5 +204,12 @@ object DFAssignment {
     * @return DataFrame containing the parent and child repository names, the SHA of the commit from which a new fork
     *         has been created and the SHA of the first commit in the fork repository
     */
-  def assignment_19(commits: DataFrame): DataFrame = ???
+  def assignment_19(commits: DataFrame): DataFrame = {
+    val parents = commits
+      .select(fullrepo(col("url")) as "repo_name", col("sha") as "parent_sha")
+    commits.select(fullrepo(col("url")) as "child_repo_name", col("sha") as "child_sha", explode(col("parents")) as "par")
+      .select(col("child_repo_name"), col("child_sha"), col("par.sha") as "parent_sha")
+      .join(parents, "parent_sha")
+      .select("repo_name", "child_repo_name", "parent_sha", "child_sha")
+  }
 }

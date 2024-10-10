@@ -10,8 +10,11 @@ import utils.{Commit, File, Stats, User}
 import scala.annotation.tailrec
 
 object RDDAssignment {
-  private def repo(commit: Commit): String = commit.url.split('/').apply(5)
-  private def autrepo(commit: Commit): String = commit.url.split("/")(4) + "/" + repo(commit)
+  private def repo(commit: Commit): String = commit.url.split("/").apply(5)
+  private def fullrepo(commit: Commit): String = {
+    val arr = commit.url.split("/")
+    arr(4) + "/" + arr(5)
+  }
   private def add(s1: Stats, s2: Stats): Stats = Stats(s1.total + s2.total, s1.additions + s2.additions, s1.deletions + s2.deletions)
   private def stat(op: Option[Stats]): Stats = op.getOrElse(Stats(0, 0, 0))
 
@@ -225,9 +228,9 @@ object RDDAssignment {
     * @return Graph representation of the commits as described above.
     */
   def assignment_11(commits: RDD[Commit]): Graph[(String, String), String] = {
-    val verts = commits.map(x => (md5HashString(autrepo(x) + "r"), ("repository", autrepo(x))))
+    val verts = commits.map(x => (md5HashString(fullrepo(x) + "r"), ("repository", fullrepo(x))))
       .union(commits.map(x => (md5HashString(x.commit.committer.name + "d"), ("developer", x.commit.committer.name))))
-    val edges = commits.map(x => Edge(md5HashString(x.commit.committer.name + "d"), md5HashString(autrepo(x) + "r"), "edge")).distinct
+    val edges = commits.map(x => Edge(md5HashString(x.commit.committer.name + "d"), md5HashString(fullrepo(x) + "r"), "edge")).distinct
     Graph.apply(verts, edges)
   }
 }
