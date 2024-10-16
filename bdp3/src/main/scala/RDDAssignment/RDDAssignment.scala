@@ -87,8 +87,8 @@ object RDDAssignment {
     */
   def assignment_5(commits: RDD[Commit]): RDD[String] = {
     val owners = commits.map(_.url.split('/').apply(4))
-    val committers = commits.map(_.commit.committer.name)
-    (owners subtract committers) union (committers subtract owners)
+    val committers = commits.map(_.commit.author.name)
+    ((owners subtract committers) union (committers subtract owners)).distinct
   }
 
   /**
