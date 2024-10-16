@@ -1,6 +1,6 @@
 package DataFrameAssignment
 
-import org.apache.spark.sql.functions.{col, datediff, dayofweek, explode, first, lag, udf, weekofyear, when, year}
+import org.apache.spark.sql.functions.{col, datediff, dayofweek, explode, eq, lag, not, udf, weekofyear, when, year}
 
 import java.sql.Timestamp
 import org.apache.spark.sql.DataFrame
@@ -177,10 +177,14 @@ object DFAssignment {
     * @return DataFrame containing the commit SHAs from which at least one new branch has been created, and the actual
     *         number of created branches
     */
-  def assignment_18(commits: DataFrame): DataFrame = commits
-    .select(explode(col("parents")) as "sha").select("sha.sha")
-    .groupBy("sha").count
-    .withColumnRenamed("count", "times_parent")
+  def assignment_18(commits: DataFrame): DataFrame = {
+    val parents = commits
+      .select(explode(col("parents")) as "sha").select("sha.sha")
+    commits.join(parents, "sha")
+      .groupBy("sha").count
+      .withColumnRenamed("count", "times_parent")
+      .filter(col("times_parent") > 1)
+  }
 
   /**
     * In the given commit DataFrame, find all commits from which a fork has been created. We are interested in the names
@@ -205,11 +209,12 @@ object DFAssignment {
     *         has been created and the SHA of the first commit in the fork repository
     */
   def assignment_19(commits: DataFrame): DataFrame = {
-    val parents = commits
-      .select(fullrepo(col("url")) as "repo_name", col("sha") as "parent_sha")
-    commits.select(fullrepo(col("url")) as "child_repo_name", col("sha") as "child_sha", explode(col("parents")) as "par")
-      .select(col("child_repo_name"), col("child_sha"), col("par.sha") as "parent_sha")
-      .join(parents, "parent_sha")
+    val children = commits
+      .select(fullrepo(col("url")) as "child_repo_name", col("sha") as "child_sha", explode(col("parents")) as "parent")
+      .select(col("child_repo_name"), col("child_sha"), col("parent.sha") as "parent_sha")
+    commits.select(col("sha") as "parent_sha", fullrepo(col("url")) as "repo_name")
+      .join(children, "parent_sha")
+      .filter("repo_name != child_repo_name")
       .select("repo_name", "child_repo_name", "parent_sha", "child_sha")
   }
 }

@@ -231,6 +231,6 @@ object RDDAssignment {
     val verts = commits.map(x => (md5HashString(fullrepo(x) + "r"), ("repository", fullrepo(x))))
       .union(commits.map(x => (md5HashString(x.commit.committer.name + "d"), ("developer", x.commit.committer.name))))
     val edges = commits.map(x => Edge(md5HashString(x.commit.committer.name + "d"), md5HashString(fullrepo(x) + "r"), "edge")).distinct
-    Graph.apply(verts, edges)
+    Graph(verts, edges)
   }
 }
