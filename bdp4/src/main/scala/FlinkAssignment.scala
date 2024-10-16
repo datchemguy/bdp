@@ -1,5 +1,4 @@
 import java.text.SimpleDateFormat
-
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.api.scala._
@@ -37,11 +36,14 @@ object FlinkAssignment {
         .map(new CommitGeoParser)
 
     /** Use the space below to print and test your questions. */
-    dummy_question(commitStream).print()
+    question_two(commitStream).print()
 
     /** Start the streaming environment. **/
     env.execute()
   }
+
+  private def extension(name: Option[String]): String =
+    if(name.isEmpty || !name.get.contains('.')) "" else name.get.substring(name.get.lastIndexOf('.')+1)
 
   /** Dummy question which maps each commits to its SHA. */
   def dummy_question(input: DataStream[Commit]): DataStream[String] = {
@@ -52,13 +54,18 @@ object FlinkAssignment {
     * Write a Flink application which outputs the sha of commits with at least 20 additions.
     * Output format: sha
     */
-  def question_one(input: DataStream[Commit]): DataStream[String] = ???
+  def question_one(input: DataStream[Commit]): DataStream[String] = input
+    .filter(_.stats.getOrElse(util.Protocol.Stats(0,0,0)).additions >= 20)
+    .map(_.sha)
 
   /**
     * Write a Flink application which outputs the names of the files with more than 30 deletions.
     * Output format:  fileName
     */
-  def question_two(input: DataStream[Commit]): DataStream[String] = ???
+  def question_two(input: DataStream[Commit]): DataStream[String] = input
+    .flatMap(_.files)
+    .filter(x => x.deletions > 30 && x.filename.nonEmpty)
+    .map(_.filename.get)
 
   /**
     * Count the occurrences of Java and Scala files. I.e. files ending with either .scala or .java.
