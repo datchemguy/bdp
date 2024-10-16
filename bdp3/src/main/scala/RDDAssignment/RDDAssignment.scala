@@ -7,8 +7,6 @@ import org.apache.spark.graphx.{Edge, Graph}
 import org.apache.spark.rdd.RDD
 import utils.{Commit, File, Stats, User}
 
-import scala.annotation.tailrec
-
 object RDDAssignment {
   private def repo(commit: Commit): String = commit.url.split("/").apply(5)
   private def fullrepo(commit: Commit): String = {
@@ -87,9 +85,11 @@ object RDDAssignment {
     * @return RDD of Strings representing the usernames that have either only committed to repositories or only own
     *         repositories.
     */
-  def assignment_5(commits: RDD[Commit]): RDD[String] = commits
-    .map(_.url.split('/').apply(4))
-    .union(commits.map(_.commit.author.name))
+  def assignment_5(commits: RDD[Commit]): RDD[String] = {
+    val owners = commits.map(_.url.split('/').apply(4))
+    val committers = commits.map(_.commit.committer.name)
+    (owners subtract committers) union (committers subtract owners)
+  }
 
   /**
     * Sometimes developers make mistakes and sometimes they make many many of them. One way of observing mistakes in commits is by
@@ -107,16 +107,10 @@ object RDDAssignment {
     *         'revert streak' as well its frequency.
     */
   def assignment_6(commits: RDD[Commit]): RDD[(String, (Int, Int))] = {
-    @tailrec def streak(list: Iterable[String], length: Int = 0, times: Int = 0): (Int, Int) = list match {
-      case x :: rest =>
-        val len = x.sliding(6).count(_ == "Revert")
-        if(len > length) streak(rest, len, 1) else if(len == length) streak(rest, len, times+1) else streak(rest, length, times)
-      case _ => (length, times)
-    }
-    commits.groupBy(_.commit.author.name)
-      .mapValues(_.map(_.commit.message).filter(_.startsWith("Revert")))
-      .filter(_._2.nonEmpty)
-      .mapValues(streak(_))
+    def streak(s: String): Int = if(!s.startsWith("Revert")) 0 else s.sliding(6).count(_ == "Revert")
+    commits.map(x => (x.commit.author.name, (streak(x.commit.message), 1)))
+      .filter(_._2._1 != 0)
+      .reduceByKey((x,y) => if(y._1 > x._1) y else (x._1, x._2 + 1))
   }
 
 
@@ -150,9 +144,15 @@ object RDDAssignment {
     * @return RDD containing the files in each repository as described above.
     */
   def assignment_8(commits: RDD[Commit]): RDD[(String, Iterable[File])] = commits
-    .map(x => (repo(x), x.files.filter(_.filename.nonEmpty)))
-    .reduceByKey((x, y) => x.union(y))
-    .mapValues(_.toIterable)
+    .map(x => ((repo(x), x.commit.committer.date), x.files.filter(_.filename.nonEmpty)))
+    .flatMapValues(x => x)
+    .map(x => (x._1._1, (x._2, x._1._2)))
+    .sortBy(x => (x._2._1.filename.get, -x._2._2.getTime))
+    .map(x => (x._1, List(x._2._1)))
+    .reduceByKey((x,y) => {
+      val next = y.head
+      if(x.head.filename.get == next.filename.get) x else next :: x
+    }).mapValues(_.toIterable)
 
 
   /**
