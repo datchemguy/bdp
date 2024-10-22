@@ -3,7 +3,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
-import util.Protocol.{Commit, CommitGeo, CommitSummary}
+import util.Protocol.{Commit, CommitGeo, CommitSummary, File}
 import util.{CommitGeoParser, CommitParser}
 
 
@@ -36,14 +36,16 @@ object FlinkAssignment {
         .map(new CommitGeoParser)
 
     /** Use the space below to print and test your questions. */
-    question_two(commitStream).print()
+    question_five(commitStream).print()
 
     /** Start the streaming environment. **/
     env.execute()
   }
 
-  private def extension(name: Option[String]): String =
-    if(name.isEmpty || !name.get.contains('.')) "" else name.get.substring(name.get.lastIndexOf('.')+1)
+  private def extension(file: File): String = {
+    val name = file.filename.getOrElse("")
+    if(name.contains(".")) name.substring(name.lastIndexOf('.')+1) else ""
+  }
 
   /** Dummy question which maps each commits to its SHA. */
   def dummy_question(input: DataStream[Commit]): DataStream[String] = {
@@ -71,21 +73,31 @@ object FlinkAssignment {
     * Count the occurrences of Java and Scala files. I.e. files ending with either .scala or .java.
     * Output format: (fileExtension, #occurrences)
     */
-  def question_three(input: DataStream[Commit]): DataStream[(String, Int)] = ???
+  def question_three(input: DataStream[Commit]): DataStream[(String, Int)] = input
+    .flatMap(_.files)
+    .map(x => (extension(x), 1))
+    .filter(Set("scala", "java") contains _._1)
+    .keyBy(_._1).reduce((x,y) => (x._1, x._2 + y._2))
 
   /**
     * Count the total amount of changes for each file status (e.g. modified, removed or added) for the following extensions: .js and .py.
     * Output format: (extension, status, count)
     */
   def question_four(
-      input: DataStream[Commit]): DataStream[(String, String, Int)] = ???
+      input: DataStream[Commit]): DataStream[(String, String, Int)] = input
+    .flatMap(_.files)
+    .map(x => (extension(x), x.status.orNull, x.changes))
+    .filter(x => Set("js", "py").contains(x._1) && x._2 != null)
+    .keyBy(x => (x._1, x._2)).reduce((x,y) => (x._1, x._2, x._3 + y._3))
 
   /**
     * For every day output the amount of commits. Include the timestamp in the following format dd-MM-yyyy; e.g. (26-06-2019, 4) meaning on the 26th of June 2019 there were 4 commits.
     * Make use of a non-keyed window.
     * Output format: (date, count)
     */
-  def question_five(input: DataStream[Commit]): DataStream[(String, Int)] = ???
+  def question_five(input: DataStream[Commit]): DataStream[(String, Int)] = input
+    .map(x => (new SimpleDateFormat("dd-MM-yyyy").format(x.commit.committer.date), 1))
+    .countWindowAll(10).reduce((x,y) => (x._1, x._2 + y._2))
 
   /**
     * Consider two types of commits; small commits and large commits whereas small: 0 <= x <= 20 and large: x > 20 where x = total amount of changes.
