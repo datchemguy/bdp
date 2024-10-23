@@ -1,6 +1,7 @@
 import java.text.SimpleDateFormat
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.api.scala._
 import org.apache.flink.configuration.Configuration
 import util.Protocol.{Commit, CommitGeo, CommitSummary, File}
@@ -96,8 +97,10 @@ object FlinkAssignment {
     * Output format: (date, count)
     */
   def question_five(input: DataStream[Commit]): DataStream[(String, Int)] = input
-    .map(x => (new SimpleDateFormat("dd-MM-yyyy").format(x.commit.committer.date), 1))
-    .countWindowAll(10).reduce((x,y) => (x._1, x._2 + y._2))
+    .map(_.commit.committer.date)
+    .assignAscendingTimestamps(_.getTime)
+    .map(x => (new SimpleDateFormat("dd-MM-yyyy").format(x), 1))
+    .timeWindowAll(Time.days(1)).reduce((x,y) => (x._1, x._2 + y._2))
 
   /**
     * Consider two types of commits; small commits and large commits whereas small: 0 <= x <= 20 and large: x > 20 where x = total amount of changes.
